@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "kaggle"
+version = "0.1.0"
+description = ""
+authors = ["David Moody <david@davidxmoody.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.12"
+numpy = "^1.26"
+pandas = "^2.2"
+matplotlib = "^3.8"
+tensorflow-macos = "^2.15"
+ipython = "^8.22.1"
+pyarrow = "^15.0.0"
+scikit-learn = "^1.4.1.post1"
+seaborn = "^0.13.2"
+
+
+[tool.pyright]
+venvPath = "/Users/davidmoody/p/kaggle"
+venv = ".venv"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
