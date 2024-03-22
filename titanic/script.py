@@ -10,8 +10,8 @@ from sklearn.ensemble import RandomForestClassifier
 
 # %% Load data
 
-test_df = pd.read_csv("titanic/test.csv")
-train_df = pd.read_csv("titanic/train.csv")
+test_df = pd.read_csv("titanic/data/test.csv")
+train_df = pd.read_csv("titanic/data/train.csv")
 
 val_mask = np.random.rand(len(train_df)) > 0.8
 val_df = train_df[val_mask]
@@ -83,4 +83,4 @@ model.fit(X, y)
 predictions = model.predict(X_test)
 
 output = pd.DataFrame({"PassengerId": test_df.PassengerId, "Survived": predictions})
-output.to_csv("titanic/submission.csv", index=False)
+output.to_csv("titanic/data/submission.csv", index=False)
