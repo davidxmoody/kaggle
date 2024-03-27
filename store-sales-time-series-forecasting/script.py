@@ -1,6 +1,8 @@
+from datetime import timedelta
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error
+from keras import layers, models
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 # %%
 
@@ -24,6 +26,8 @@ transactions = pd.read_csv(
 
 # %%
 
+oil = oil.rename(columns={"dcoilwtico": "oil"})
+oil = oil.reindex(pd.date_range(train.date.min(), train.date.max()))
 oil = oil.interpolate(method="linear", limit_direction="both")
 
 # %%
@@ -35,9 +39,9 @@ holiday_dates = holidays.loc[
 # %%
 
 train["days_since_start"] = (train.date - train.date[0]).dt.days
-train["year"] = train.date.dt.year
+# train["year"] = train.date.dt.year
 train["month"] = train.date.dt.month
-train["day"] = train.date.dt.day
+# train["day"] = train.date.dt.day
 train["dayofweek"] = train.date.dt.dayofweek
 train = train.merge(oil, left_on="date", right_index=True, how="left")
 train = train.merge(
@@ -45,16 +49,32 @@ train = train.merge(
 )
 train["holiday"] = train.date.isin(holiday_dates.values)
 
+train["mean_sales"] = train.groupby(["store_nbr", "family"]).sales.transform("mean")
+
+# %%
+
+train_subset = train.query("family == 'DAIRY'")
+
 train_dummies = pd.get_dummies(
-    train,
+    train_subset,
     columns=[
-        "family",
+        # "family",
         "dayofweek",
-        "store_cluster",
-        "store_type",
+        # "month",
+        # "store_cluster",
+        # "store_type",
     ],
 ).drop(
-    columns=["date", "store_nbr", "year", "month", "day", "store_city", "store_state"]
+    columns=[
+        "family",
+        "month",
+        "date",
+        "store_nbr",
+        "store_city",
+        "store_state",
+        "store_cluster",
+        "store_type",
+    ]
 )
 
 # %%
@@ -79,25 +99,46 @@ train_dummies = pd.get_dummies(
 # train_subset = train_dummies.loc[(train_dummies.store_nbr == 1) & (train_dummies.family == "DAIRY")]
 
 # split_date = train.iloc[-1, 0] - timedelta(days=30)
-# train_selector = train_subset.date <= split_date
 
-tmp_train = train_dummies.iloc[:-1654]
-tmp_test = train_dummies.iloc[-1654:]
+test_selector = train_subset.date >= (train_subset.date.iloc[-1] - timedelta(days=15))
+
+tmp_train = train_dummies.loc[~test_selector]
+tmp_test = train_dummies.loc[test_selector]
 
 y_train = tmp_train.sales
 y_test = tmp_test.sales
 
-X_train = tmp_train.drop(columns=["sales"])
-X_test = tmp_test.drop(columns=["sales"])
+X_train = tmp_train.drop(columns=["sales"]).astype(float)
+X_test = tmp_test.drop(columns=["sales"]).astype(float)
 
 # %%
 
-model = RandomForestRegressor()
+num_features = len(X_train.columns)
 
-model.fit(X_train, y_train)
+model = models.Sequential(
+    [
+        layers.Dense(32, activation="relu", input_shape=(num_features,)),
+        layers.Dense(16, activation="relu"),
+        layers.Dense(16, activation="relu"),
+        layers.Dense(1),
+    ]
+)
+
+model.compile(optimizer="adam", loss="mse")
+
+model.fit(X_train, y_train, epochs=10, batch_size=32)
+
+loss = model.evaluate(X_test, y_test)
+print(loss)
+
+# %%
 
 y_pred = model.predict(X_test)
+results = pd.DataFrame({"y_pred": y_pred[:,0], "y_test": y_test})
+results.plot.bar()
 
-mse = mean_squared_error(y_test, y_pred)
+# %%
 
-print(mse)
+sns.scatterplot(train_subset, y="sales", x="oil", hue="family")
+ax = plt.gca()
+ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
