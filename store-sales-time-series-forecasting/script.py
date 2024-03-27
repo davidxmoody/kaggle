@@ -51,14 +51,18 @@ train["holiday"] = train.date.isin(holiday_dates.values)
 
 train["mean_sales"] = train.groupby(["store_nbr", "family"]).sales.transform("mean")
 
+train["recent_sales"] = train.groupby(["store_nbr", "family"]).sales.transform(
+    lambda x: x.rolling(window=30).mean().shift(15)
+)
+
 # %%
 
-train_subset = train.query("family == 'DAIRY'")
+train_subset = train.dropna()
 
 train_dummies = pd.get_dummies(
     train_subset,
     columns=[
-        # "family",
+        "family",
         "dayofweek",
         # "month",
         # "store_cluster",
@@ -66,7 +70,7 @@ train_dummies = pd.get_dummies(
     ],
 ).drop(
     columns=[
-        "family",
+        # "family",
         "month",
         "date",
         "store_nbr",
@@ -117,25 +121,24 @@ num_features = len(X_train.columns)
 
 model = models.Sequential(
     [
-        layers.Dense(32, activation="relu", input_shape=(num_features,)),
-        layers.Dense(16, activation="relu"),
-        layers.Dense(16, activation="relu"),
+        layers.Dense(50, activation="relu", input_shape=(num_features,)),
+        layers.Dense(20, activation="relu"),
         layers.Dense(1),
     ]
 )
 
 model.compile(optimizer="adam", loss="mse")
 
-model.fit(X_train, y_train, epochs=10, batch_size=32)
+model.fit(X_train, y_train, epochs=10, batch_size=1000)
 
-loss = model.evaluate(X_test, y_test)
-print(loss)
+print()
+model.evaluate(X_test, y_test)
 
 # %%
 
 y_pred = model.predict(X_test)
-results = pd.DataFrame({"y_pred": y_pred[:,0], "y_test": y_test})
-results.plot.bar()
+results = pd.DataFrame({"y_pred": y_pred[:, 0], "y_test": y_test})
+results.iloc[-60:].plot.bar()
 
 # %%
 
