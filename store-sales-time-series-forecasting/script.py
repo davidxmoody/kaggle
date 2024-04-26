@@ -17,10 +17,7 @@
 # %%
 from datetime import timedelta
 
-# from keras import layers, models
-import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
 import plotly.express as px
 
 
@@ -96,29 +93,32 @@ fig.show()
 
 
 # %%
-monthly_sales = (
-    train.groupby("family").resample("MS", on="date").sales.mean().reset_index()
+fig = px.scatter(
+    train.groupby(["family", "date"])
+    .sales.sum()
+    .reset_index()
+    .merge(oil, left_on="date", right_index=True, how="left"),
+    x="oil",
+    y="sales",
+    color="family",
+    trendline="ols",
 )
-monthly_sales = monthly_sales.merge(
-    oil.resample("MS").mean(), left_on="date", right_index=True, how="left"
-)
-
-plt.figure(figsize=(9, 3))
-sns.scatterplot(monthly_sales, x="oil", y="sales", hue="family")
-plt.title("Sales vs oil")
-plt.legend().set_visible(False)
-plt.show()
+fig.update_yaxes(range=[0, None])
+fig.update_layout(title="Sales vs oil")
+fig.show()
 
 
-## Holiday data
+# %% [markdown]
+# ## Holiday data
+#
+# To simplify this, extract a list of dates for national holidays after transfers have occurred.
+
 
 # %%
 holidays = pd.read_csv("data/holidays_events.csv", parse_dates=["date"])
 
 holidays.tail(3)
 
-
-# To simplify this, extract a list of dates for national holidays after transfers have occurred.
 
 # %%
 holiday_dates = holidays.loc[
@@ -128,7 +128,8 @@ holiday_dates = holidays.loc[
 holiday_dates.tail(3)
 
 
-## Store data
+# %% [markdown]
+# ## Store data
 
 # %%
 stores = pd.read_csv("data/stores.csv", index_col="store_nbr")
@@ -136,7 +137,8 @@ stores = pd.read_csv("data/stores.csv", index_col="store_nbr")
 stores.tail()
 
 
-## Transaction data
+# %% [markdown]
+# ## Transaction data
 
 # %%
 transactions = pd.read_csv(
@@ -146,7 +148,8 @@ transactions = pd.read_csv(
 )
 
 
-## Features
+# %% [markdown]
+# ## Features
 
 # %%
 train["days_since_start"] = (train.date - train.date[0]).dt.days
