@@ -19,14 +19,17 @@ from datetime import timedelta
 
 import pandas as pd
 import plotly.express as px
+from plotly_calplot import calplot
 
 
 # %%
-test = pd.read_csv("data/test.csv", index_col="id", parse_dates=["date"])
 train = pd.read_csv("data/train.csv", index_col="id", parse_dates=["date"])
+test = pd.read_csv("data/test.csv", index_col="id", parse_dates=["date"])
 
+min_date = train.date.min()
+max_date = test.date.max()
+date_range = pd.date_range(min_date, max_date)
 
-# %%
 train.tail(3)
 
 
@@ -66,12 +69,6 @@ fig.update_yaxes(range=[0, None])
 fig.show()
 
 
-# %%
-# grocery_by_store = train.query("family == 'GROCERY I'").groupby("store_nbr").resample("MS", on="date").sales.sum().reset_index()
-# sns.lineplot(grocery_by_store, x="date", y="sales", hue="family")
-# plt.show()
-
-
 # %% [markdown]
 # ## Oil data
 
@@ -80,8 +77,10 @@ oil = pd.read_csv("data/oil.csv", index_col="date", parse_dates=["date"])
 
 oil = oil.rename(columns={"dcoilwtico": "oil"})
 
-oil = oil.reindex(pd.date_range(train.date.min(), train.date.max()))
+oil = oil.reindex(date_range)
 oil = oil.interpolate(method="linear", limit_direction="both")
+
+oil.tail(3)
 
 
 # %%
@@ -110,8 +109,6 @@ fig.show()
 
 # %% [markdown]
 # ## Holiday data
-#
-# To simplify this, extract a list of dates for national holidays after transfers have occurred.
 
 
 # %%
@@ -120,12 +117,26 @@ holidays = pd.read_csv("data/holidays_events.csv", parse_dates=["date"])
 holidays.tail(3)
 
 
+# %% [markdown]
+# To simplify this, just use a single boolean for if a national holiday was present (after accounting for transfers).
+#
+# Note that the month-long block starting April 2016 was due to the earthquake.
+
+
 # %%
 holiday_dates = holidays.loc[
     (holidays.transferred == False) & (holidays.locale == "National")
 ].date
 
-holiday_dates.tail(3)
+fig = calplot(
+    pd.DataFrame({"holiday": 1, "date": holiday_dates}).query("date >= '2013'"),
+    x="date",
+    y="holiday",
+    cmap_min=0,
+    cmap_max=1.5,
+    years_title=True,
+)
+fig.show()
 
 
 # %% [markdown]
@@ -134,18 +145,32 @@ holiday_dates.tail(3)
 # %%
 stores = pd.read_csv("data/stores.csv", index_col="store_nbr")
 
-stores.tail()
+stores.tail(3)
 
 
 # %% [markdown]
 # ## Transaction data
+#
+# - There are very consistent peaks around Christmas
+# - The total number of transactions slowly rises over time
+# - Some stores have zero transactions for brief periods (e.g. store_nbr 24)
+# - Some stores only start having data mid-way through the period (e.g. store_nbr 52)
+# - No transaction data is given for the test data period
 
 # %%
-transactions = pd.read_csv(
-    "data/transactions.csv",
-    index_col=["date", "store_nbr"],
-    parse_dates=["date"],
+transactions = pd.read_csv("data/transactions.csv", parse_dates=["date"])
+
+monthly_transactions = (
+    transactions.groupby("store_nbr")
+    .resample("MS", on="date")
+    .transactions.sum()
+    .reset_index()
 )
+
+fig = px.line(monthly_transactions, x="date", y="transactions", color="store_nbr")
+fig.update_yaxes(range=[0, None])
+fig.update_xaxes(range=[min_date, max_date])
+fig.show()
 
 
 # %% [markdown]
