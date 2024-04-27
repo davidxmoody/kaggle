@@ -20,15 +20,12 @@ from datetime import timedelta
 import pandas as pd
 import plotly.express as px
 from plotly_calplot import calplot
+from statsmodels.tsa.seasonal import seasonal_decompose
 
 
 # %%
 train = pd.read_csv("data/train.csv", index_col="id", parse_dates=["date"])
 test = pd.read_csv("data/test.csv", index_col="id", parse_dates=["date"])
-
-min_date = train.date.min()
-max_date = test.date.max()
-date_range = pd.date_range(min_date, max_date)
 
 train.tail(3)
 
@@ -77,8 +74,7 @@ oil = pd.read_csv("data/oil.csv", index_col="date", parse_dates=["date"])
 
 oil = oil.rename(columns={"dcoilwtico": "oil"})
 
-oil = oil.reindex(date_range)
-oil = oil.interpolate(method="linear", limit_direction="both")
+oil = oil.ffill().bfill()
 
 oil.tail(3)
 
@@ -169,7 +165,30 @@ monthly_transactions = (
 
 fig = px.line(monthly_transactions, x="date", y="transactions", color="store_nbr")
 fig.update_yaxes(range=[0, None])
-fig.update_xaxes(range=[min_date, max_date])
+fig.update_xaxes(range=[train.date.min(), test.date.max()])
+fig.show()
+
+
+# %% [markdown]
+# ## Seasonality
+
+
+# %%
+sd = seasonal_decompose(
+    train.resample("W", on="date").sales.sum(), period=52, model="multiplicative"
+)
+sd.plot()
+pass
+
+
+# %% [markdown]
+# ## On promotion
+
+
+# %%
+fig = px.bar(
+    train.groupby("family").onpromotion.sum().reset_index(), x="family", y="onpromotion"
+)
 fig.show()
 
 
