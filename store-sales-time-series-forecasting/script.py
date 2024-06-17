@@ -42,12 +42,13 @@ train.tail(3)
 
 # %%
 monthly_sales = (
-    train.groupby("family").resample("MS", on="date").sales.sum().reset_index()
+    train.groupby("family").resample("MS", on="date").sales_norm.sum().reset_index()
 )
 
-fig = px.line(monthly_sales, x="date", y="sales", color="family")
+fig = px.line(monthly_sales, x="date", y="sales_norm", color="family")
 fig.update_layout(title="Monthly sales by family")
 fig.update_yaxes(range=[0, None])
+fig.update_xaxes(range=[monthly_sales.date.min(), monthly_sales.date.max()])
 fig.show()
 
 
@@ -276,3 +277,18 @@ X_test = tmp_test.drop(columns=["sales"]).astype(float)
 # y_pred = model.predict(X_test)
 # results = pd.DataFrame({"y_pred": y_pred[:, 0], "y_test": y_test})
 # results.iloc[-60:].plot.bar()
+
+
+# %% [markdown]
+# ## Normalizing
+
+
+# %%
+train["sales_norm"] = train.groupby(["store_nbr", "family"]).sales.transform(
+    lambda x: x / x.dropna().mean()
+)
+
+
+# %%
+fig = px.scatter(train, x="onpromotion", y="sales_norm", color="family")
+fig.show()
