@@ -5,6 +5,7 @@ import plotly.subplots as sp
 
 # %%
 train = pd.read_csv("data/train.csv")
+test = pd.read_csv("data/test.csv")
 
 
 # %%
@@ -28,3 +29,15 @@ fig.update_yaxes(scaleanchor="x", scaleratio=1, autorange="reversed")
 fig.update_layout(coloraxis={"colorscale": "gray_r"})
 
 fig.show()
+
+
+# %%
+label_counts = (
+    train.label.value_counts().sort_index().reset_index().astype({"label": str})
+)
+fig = px.bar(label_counts, y="count", x="label")
+fig.show()
+
+
+# %%
+train.isnull().values.any() or test.isnull().values.any()
