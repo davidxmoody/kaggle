@@ -71,6 +71,15 @@ model.add(
     )
 )
 
+model.add(
+    Conv2D(
+        filters=32,
+        kernel_size=(3, 3),
+        padding="same",
+        activation="relu",
+    )
+)
+
 model.add(Flatten())
 
 model.add(Dense(10, activation="softmax"))
@@ -79,10 +88,23 @@ model.compile(loss="categorical_crossentropy", metrics=["accuracy"])
 
 
 # %%
-model.fit(X_train, Y_train, epochs=1, batch_size=100, validation_data=(X_val, Y_val))
+model.fit(X_train, Y_train, epochs=5, batch_size=100, validation_data=(X_val, Y_val))
 
 
 # %%
 Y_val_pred = model.predict(X_val)
 
 confusion_matrix(np.argmax(Y_val_pred, axis=1), np.argmax(Y_val, axis=1))
+
+
+# %%
+test_pred = np.argmax(model.predict(X_test), axis=1)
+
+submission = pd.DataFrame(
+    {
+        "ImageId": range(1, len(test) + 1),
+        "Label": test_pred,
+    }
+)
+
+submission.to_csv("data/submission.csv", index=False)
